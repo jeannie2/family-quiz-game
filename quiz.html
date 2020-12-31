@@ -1,0 +1,2033 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Family Quiz Game</title>
+
+<link rel="shortcut icon" href="#" /> <!---so no favicon msg in console -->
+
+  <style>
+    body {
+      overflow:hidden;
+      background:yellow;
+    }
+
+    iframe {
+      display:none; 
+      position:relative;
+      top:170px; 
+      margin:auto;
+      text-align:center;
+    }
+
+    #results {
+      display:none; /* important! */
+      position:relative; 
+      top:240px; 
+      text-align:center;
+      font-size:50px;
+      color:black;
+    }
+
+    #quizdiv {
+      position:relative; /* absolute */
+      top:150px;
+      font-family: Calibri, sans-serif;
+      text-align:center;
+    }
+
+    p#question {
+      position:relative;
+      top:10px; 
+      text-align:center;
+      font-size:28px; 
+    }
+
+    div#optionsbox {
+      display:inline-block; 
+      text-align:left;
+      font-size:20px;
+    }
+
+    </style>
+
+</head>
+<body>
+  <div id="quizdiv">
+    <p id="question"></p>
+      <div id="optionsbox">
+        <p id="A"></p> 
+        <p id="B"></p>
+        <p id="C"></p>
+        <p id="D"></p>
+      </div>
+  </div>
+
+<div><p id="info"></p></div> 
+<div id="results"><p></p></div>
+
+<iframe id="media" width="420" height="345" src="" frameborder="0" allowfullscreen> </iframe> <!---- doesnt work when ? before autoplay. also work if no put & before start -->
+<audio id="sound"><source src="" type="audio/mpeg"></audio>
+
+<script>
+//position wil just leave 
+//error when call listening when already listening. will leave
+//Korean: need check option e and answerAlt
+
+//QQ hope gum is correct. check gum within bounds when not many qs left, hope works. gum !== 0 at beginning
+//QQ ideally detect end sound, correct sound may play when next question showing
+//QQ ideally detect end youtube video, addeventlistener
+  //detect end of audio: https://stackoverflow.com/questions/11103582/how-do-you-detect-when-html5-audio-has-finished-playing-more-than-once 
+  //detect end yt video: https://stackoverflow.com/a/27073513 
+//QQ how make video play after applause sound? no work if else if. if use if (and else if?) calls more than 1 question ~ maybe calling isgameover() twice. might play video at same time as applause
+//better use [] instead of [""] for e and answerAlt inside questions array, bc length of array is 0 not 1. both works. iterates over empty array. for (var i = 0; i < 0; i++)
+
+//yes qs (in local storage) and questions.length = 100 at beginning (when refresh after gameOver)
+//console.log("stopped listening"). QQ why keep printing?
+//check endspeaking stil prints - guess so
+
+//if close, no write values to localstorage?
+//if close when don't answer question, or refresh and dont answer question, question not spliced
+//poss of bad timing for all
+//uppercase numbers (as string) and maybe others? in questions array 
+//no need uppercase alphabet options (if say alphabet not actual answer) but did anyway
+//ideal hv teams, points
+//ideally JSON: write questions to localstorage QQ
+
+//ideally no speak while sound playing, ideal hv original way (speak then sound, red background while sound, papa then speak wrong answer)
+//ideally use questionsAnswered and localstorage for randomNumber in correct, wrong visuals 
+//not sure why display block/none not working properly for youtube in iframe
+
+if ('speechSynthesis' in window) { //initialise gameOver, speaking in global scope (or else no defined until run functions) and in case proceed at start
+  console.log('Speech recognition is supported');
+  var SpeechRecognition = SpeechRecognition || webkitSpeechRecognition
+  var SpeechGrammarList = SpeechGrammarList || webkitSpeechGrammarList
+  var SpeechRecognitionEvent = SpeechRecognitionEvent || webkitSpeechRecognitionEvent
+  var synth = window.speechSynthesis;
+  var speaking = synth.speaking;
+  var speaking = false;
+
+  var recognition = new SpeechRecognition();
+  recognition.lang = 'en-US';
+
+  var qs;
+  var gum;
+  var gameOver = false;
+  var results = document.getElementById("results"); //easier
+  var sound = document.getElementById("sound"); 
+  //var listening = false;
+
+  var questions = [ //answerAlt and e just in case
+    {
+      question: "Which school did Elon Musk attend?",
+        options: {
+          a: "Yale",
+          b: "Harvard",
+          c: "UPenn", 
+          d: "MIT", //speaking "mhit" not letter by letter also counts
+          e: [""]
+        },
+        //answer: "c",
+        rawanswer: "c",
+        answer: "UPenn", 
+        answerAlt: [""]
+      },
+
+      {
+        question: "Who is the most powerful Greek god?",
+        options: {
+          a: "Poseiden",
+          b: "Ares",
+          c: "Prometheus",
+          d: "Zeus",
+          e: ["aries", "Poseidon"]  
+        },
+        //answer: "d",
+        rawanswer: "d",
+        answer: "Zeus",
+        answerAlt: [""]
+      },
+    
+      {
+        question: "What is the largest island in Greece?", //which greek island is this?
+        options: {
+          a: "Santorini",
+          b: "Mykonos",
+          c: "Crete",
+          d: "Corfu",
+          e: [""]
+        },
+        //answer: "a",
+        rawanswer: "c",
+        answer: "Crete",
+        answerAlt: [""]
+      },
+
+        
+      {
+        question: "Who of the following did not graduate from UPenn?",
+        options: { 
+          a: "Ivanka Trump",
+          b: "Warren Buffet",
+          c: "Elon Musk",
+          d: "Jeff Bezos",
+          e: ["Warren Buffett"]
+        },
+        //answer: "d",
+        rawanswer: "d",
+        answer: "Jeff Bezos",
+        answerAlt: [""]
+      },
+
+      {
+        question: "How many planets are there in our solar system?",
+        options: {
+          a: "7",
+          b: "8",
+          c: "9", 
+          d: "10",
+          e: [""]
+        },
+        //answer: "b",
+        rawanswer: "b",
+        answer: "8", //string or number?
+        answerAlt:[""]
+      } ,
+
+   
+              {
+                question: "Around how many times bigger is Earth compared to the Moon?", 
+                options: {
+                  a: "10",
+                  b: "3.5", 
+                  c: "8",
+                  d: "20",
+                  e: [""]
+                },
+                //answer:"c", 
+                rawanswer: "c",
+                answer: "8",
+                answerAlt: [""]
+              },
+
+              {
+                question: "Who was the first person to go to outer space?",
+                options: {
+                  a: "Buzz Aldrin",
+                  b: "Neil Armstrong",
+                  c: "Yuri Gagarin",
+                  d: "Andriyan Nikolayev",
+                  e: ["Andrian Nikolayev"]
+                },
+                //answer:"c",
+                rawanswer: "c",
+                answer: "Yuri Gagarin",
+                answerAlt:[""]
+              },
+
+              {
+                question: "What year was Donald Trump born?", 
+                options: {
+                  a: "1941",
+                  b: "1943",
+                  c: "1946",
+                  d: "1950",
+                  e: [""] //year
+                },
+                //answer:"c",
+                rawanswer: "c",
+                answer: "1946", 
+                answerAlt:[""]
+              },
+
+              {
+                question: "Which of the following was the largest empire in human history?",
+                options: {
+                  a: "Roman Empire",
+                  b: "British Empire",
+                  c: "Russian Empire",
+                  d: "Mongol Empire",
+                  e: [""]
+                },
+                  //answer: "d",
+                  rawanswer: "d",
+                  answer: "Mongol Empire",
+                  answerAlt: [""]
+              },
+
+              {
+                question: "How much litres of water should you drink per day?",
+                options: {
+                  a: "2", //"2 liters"
+                  b: "1.5", 
+                  c: "0.8",
+                  d: "2.3",
+                  e: [""]
+                },
+                  //answer: "a",
+                  rawanswer: "a",
+                  answer: "2",
+                  answerAlt: [""]
+              },
+
+              {
+                question: "Who is a founder of PayPal?", 
+                options: {
+                  a: "Elon Musk",
+                  b: "Jeff Bezos",
+                  c: "Michael Dell",
+                  d: "Mark Zuckerberg",
+                  e: [""]
+                },
+                  //answer:"a",
+                  rawanswer: "a",
+                  answer: "Elon Musk",
+                  answerAlt: [""]
+              },
+
+              {
+                question: "How tall is Mount Everest in metres?",  
+                options: {
+                  a: "10,050", //says digits?
+                  b: "9,024",  //says digits?
+                  c: "15,017",
+                  d: "8,848", //eight eight four eight also works
+                  e: ["10050", "9024", "15017", "8848"]
+                },
+                  //answer: "d",
+                  rawanswer: "d",
+                  answer: "8,848", 
+                  answerAlt: ["8848"] 
+              },
+
+              {
+                question: "How long is a day on Mars?",
+                options: {
+                  a: "29 hours and 30 minutes", 
+                  b: "10 hours and 15 minutes",
+                  c: "24 hours and 27 minutes",
+                  d: "24 hours and 37 minutes",
+                  e: ["29 hours and 30-minutes", "10 hours and 15-minutes", "24 hours and 27-minutes", "24 hours and 37-minutes"] 
+                }, 
+                  //answer: "d",
+                  rawanswer: "d",
+                  answer: "24 hours and 37 minutes", 
+                  answerAlt: ["24 hours and 37-minutes"]
+              },
+
+              {
+                question: "What is the biggest planet in our solar system?",
+                options: {
+                  a: "Jupiter",
+                  b: "Saturn",
+                  c: "Uranus",
+                  d: "Neptune",
+                  e: [""]
+                },
+                  //answer: "a",
+                  rawanswer: "a",
+                  answer: "Jupiter",
+                  answerAlt: [""]
+              },
+
+              {
+                question: "How many moons does Jupiter have?",
+                options: {
+                  a: "150", 
+                  b: "40",
+                  c: "15",
+                  d: "79",
+                  e: [""]
+                },
+                  //answer: "d",
+                  rawanswer: "d",
+                  answer: "79",
+                  answerAlt: [""]
+              },
+
+              {
+                question: "Which planet has a solid surface?",
+                options: {
+                  a: "Jupiter",
+                  b: "Saturn",
+                  c: "Uranus",
+                  d: "Neptune",
+                  e: [""]
+                },
+                  //answer: "a",
+                  rawanswer: "a",
+                  answer: "Jupiter", 
+                  answerAlt: [""]
+              },
+
+              {
+                question: "Where is the macadamia nut originally from?",
+                options: {
+                  a: "Brazil",
+                  b: "Jamaica",
+                  c: "Hawaii",
+                  d: "Australia",
+                  e: [""]
+                },
+                  //answer: "d",
+                  rawanswer: "d",
+                  answer: "Australia",
+                  answerAlt: [""]
+              },
+
+              {
+                question: "Who invented the telephone?",
+                options: {
+                  a: "Thomas Edison",
+                  b: "Alexander Graham Bell",
+                  c: "Samuel Morse",
+                  d: "Isaac Newton",
+                  e: [""]
+                },
+                  //answer: "b",
+                  rawanswer: "b",
+                  answer: "Alexander Graham Bell",
+                  answerAlt: [""]
+              },
+
+              {
+                question: "Texas is the USA's biggest producer of what?", 
+                options: {
+                  a: "crude oil and natural gas",
+                  b: "crude oil and cotton", 
+                  c: "cotton and cattle",
+                  d: "cotton and citrus fruit",
+                  e: [""]
+                },
+                  //answer: "a",
+                  rawanswer: "a",
+                  answer: "crude oil and natural gas",
+                  answerAlt: [""]
+              },
+
+              {
+                question: "Which are the top 3 largest countries by total area?",
+                options: {
+                  a: "Russia, China, Canada",
+                  b: "Russia, USA, Canada",
+                  c: "Russia, Canada, USA",
+                  d: "Russia, Canada, Brazil",
+                  e: ["Russia China Canada", "Russia USA Canada", "Russia Canada USA", "Russia Canada Brazil"] 
+                },
+                  //answer: "c",
+                  rawanswer: "c",
+                  answer: "Russia, Canada, USA",
+                  answerAlt: ["Russia Canada USA"]
+              },
+
+              {
+                question: "Which is the world's wealthiest country",
+                options: {
+                  a: "USA",
+                  b: "Canada",
+                  c: "Qatar",
+                  d: "Kuwait",
+                  e: [""] 
+                },
+                  //answer: "c",
+                  rawanswer: "c",
+                  answer: "Qatar",
+                  answerAlt: [""]
+              },
+
+              {
+                question: "Which is the biggest US state by land area?",
+                options: {
+                  a: "Texas",
+                  b: "Alaska",
+                  c: "Arizona",
+                  d: "California",
+                  e: [""]
+                },
+                  //answer: "b"
+                  rawanswer: "b",
+                  answer: "Alaska",
+                  answerAlt: [""]
+              },
+
+              {
+                question: "Which is the world's poorest country?",
+                options: {
+                  a: "Congo",
+                  b: "Yemen",
+                  c: "Ethiopia",
+                  d: "Haiti",
+                  e: [""]  
+                },
+                  //answer: "a",
+                  rawanswer: "a",
+                  answer: "Congo",
+                  answerAlt: [""]
+              },
+
+              {
+                question: "What is the world's most popular holiday destination?",
+                options: {
+                  a: "China",
+                  b: "Thailand",
+                  c: "France",
+                  d: "New York",
+                  e: [""]
+                },
+                  //answer: "c",
+                  rawanswer: "c",
+                  answer: "France",
+                  answerAlt: [""]
+              },
+
+              {
+                question: "Up to how fast can a cheetah run in km/h?", 
+                options: {
+                  a: "90",
+                  b: "115",
+                  c: "120",
+                  d: "130",
+                  e: [""]
+                },
+                  //answer: "d",
+                  rawanswer: "d",
+                  answer: "130",
+                  answerAlt: [""]
+              },
+
+              {
+                question: "What is the most visited museum in the world?",
+                options: {
+                  a: "British Museum",
+                  b: "National Museum of China",
+                  c: "The Metropolitan Museum of Art",
+                  d: "The Louvre",
+                  e: [""]
+                },
+                  //answer: "d",
+                  rawanswer: "d",
+                  answer: "The Louvre",
+                  answerAlt: [""]
+              },
+
+              {
+                question: "Who of the following is not a founder of Apple?", 
+                options: {
+                  a: "Steve Jobs", 
+                  b: "Ronald Wayne",
+                  c: "Steve Wozniak",
+                  d: "Larry Page",
+                  e: [""]
+                },
+                  //answer: "d",
+                  rawanswer: "d",
+                  answer: "Larry Page",
+                  answerAlt: [""]
+              },
+
+              {
+                question: "Which city has the biggest population?", 
+                options: {
+                  a: "Hong Kong",
+                  b: "Mumbai",
+                  c: "Beijing",
+                  d: "Tokyo",
+                  e: [""]
+                },
+                  //answer: "d",
+                  rawanswer: "d",
+                  answer: "Tokyo",
+                  answerAlt: [""]
+              },
+
+              {
+                question: "What is the world's biggest ocean?", 
+                options: {
+                  a: "Atlantic Ocean", 
+                  b: "Pacific Ocean",
+                  c: "Indian Ocean",
+                  d: "Arctic Ocean",
+                  e: [""]
+                },
+                  //answer: "b",
+                  rawanswer: "b",
+                  answer: "Pacific Ocean",
+                  answerAlt: [""]
+              },
+
+              {
+                question: "How tall in feet is the biggest wave ever recorded?", 
+                options: {
+                  a: "150", //150 feet
+                  b: "105",
+                  c: "50",
+                  d: "100",
+                  e: [""]
+                },
+                  //answer: "d",
+                  rawanswer: "d",
+                  answer: "100", 
+                  answerAlt: [""]
+              },
+              
+              {
+                question: "What is the world's richest company by revenue?",
+                options: {
+                  a: "Sinopec Group",
+                  b: "Tesla",
+                  c: "Apple",
+                  d: "Walmart",
+                  e: ["Sino Pec Group"]
+                },
+                  //answer:"d",
+                  rawanswer: "d",
+                  answer: "Walmart",
+                  answerAlt: [""]
+              },
+
+              {
+                question: "What year was the first Olympics held in Greece?", 
+                options: {
+                  a: "1935", 
+                  b: "1910",
+                  c: "1940",
+                  d: "1896",
+                  e: [""]  //year. ["19:35"] 
+                },
+                  //answer:"d",
+                  rawanswer: "d",
+                  answer: "1896", 
+                  answerAlt: [""] 
+              },
+
+              {
+                question: "What is Korea's biggest export?", 
+                options: {
+                  a: "electrical machinery",
+                  b: "kimchi", 
+                  c: "cars",
+                  d: "ships",
+                  e: [""]
+                },
+                  //answer: "a",
+                  rawanswer: "a",
+                  answer: "electrical machinery",
+                  answerAlt: [""]
+              },
+
+              {
+                question: "Which ocean is he Bermuda Triangle said to be located in?", 
+                options: {
+                  a: "Indian Ocean",
+                  b: "Pacific Ocean",
+                  c: "Atlantic Ocean",
+                  d: "Arctic Ocean",
+                  e: [""]
+                },
+                  //answer: "c",
+                  rawanswer: "c",
+                  answer: "Atlantic Ocean",
+                  answerAlt: [""]
+              },
+
+              {
+                question: "In what year was the computer invented?", 
+                options: {
+                  a: "1822",
+                  b: "1939",
+                  c: "1943",
+                  d: "1955",
+                  e: [""] //year
+                },
+                  //answer: "a",
+                  rawanswer: "a",
+                  answer: "1822",
+                  answerAlt: [""] 
+              },
+
+              {
+                question: "Approximately how big is the International Space Station?", 
+                options: {
+                  a: "75 metres",
+                  b: "1 US football field",
+                  c: "250 metres",
+                  d: "53 metres",
+                  e:  ["75m", "75 m", "250m", "250 m", "53m", "53 m"]
+                },
+                  //answer: "b",
+                  rawanswer: "b",
+                  answer: "1 US football field",
+                  answerAlt: [""]
+              },
+
+              {
+                question: "Which year did the first person travel to space?",
+                options: {
+                  a: "1957",
+                  b: "1945",
+                  c: "1971",
+                  d: "1961",
+                  e: [""] //year
+                },
+                  //answer: "d",
+                  rawanswer:"d",
+                  answer: "1961", 
+                  answerAlt: [""]
+              },
+
+              {
+                question: "Who is the current Federal Reserve Chair?",
+                options: {
+                  a: "Jerome H. Powell",
+                  b: "Janet L. Yellen",
+                  c: "Christine Lagarde",
+                  d: "Larry Kudlow",
+                  e: ["Janet L Yellen"]
+                },
+                  //answer: "a",
+                  rawanswer: "a",
+                  answer: "Jerome H. Powell",
+                  answerAlt: [""]
+              },
+
+              {
+                question: "Which ocean was Atlantis believed to be located in?",
+                options: {
+                  a: "Arctic Ocean",
+                  b: "Pacific Ocean",
+                  c: "Atlantic Ocean",
+                  d: "Indian Ocean",
+                  e: [""]
+                },
+                  //answer: "c",
+                  rawanswer: "c",
+                  answer: "Atlantic Ocean",
+                  answerAlt: [""]
+              },
+
+              {
+                question: "Who said this quote: 'give me 6 hours to chop down a tree and I will spend the first 4 sharpening the ax'?",
+                options: {
+                  a: "Abraham Lincoln",
+                  b: "George Washington",
+                  c: "Thomas Jefferson",
+                  d: "Andrew Jackson",
+                  e: [""]
+                },
+                  //answer: "a",
+                  rawanswer: "a",
+                  answer: "Abraham Lincoln",
+                  answerAlt: [""]
+              },
+
+              {
+                question: "Who said this quote: 'Ask not what you country can do for you, but what you can do for your country'?",
+                options: {
+                  a: "Abraham Lincoln",
+                  b: "Barack Obama",
+                  c: "George Washington",
+                  d: "JFK",
+                  e: [""]
+                },
+                  //answer: "d",
+                  rawanswer: "d",
+                  answer: "JFK",
+                  answerAlt: [""]
+              },
+
+              {
+                question: "Which is the world's biggest animal?",
+                options: {
+                  a: "whale shark",
+                  b: "blue whale",
+                  c: "elephant",
+                  d: "giraffe",
+                  e: [""]
+                },
+                  //answer: "b",
+                  rawanswer: "b",
+                  answer: "blue whale",
+                  answerAlt: [""]
+              },
+
+              {
+                question: "What year was Kim Jong Un born?",
+                options: {
+                  a: "1970",
+                  b: "1975",
+                  c: "1981",
+                  d: "1984",
+                  e: [""] //year
+                },
+                  //answer: "d",
+                  rawanswer: "d",
+                  answer: "1984",
+                  answerAlt: [""]
+              },
+
+              {
+                question: "Which of the following does not boost your immune system?", 
+                options: {
+                  a: "almonds",
+                  b: "broccoli",
+                  c: "sweet potatoes",
+                  d: "alcohol",
+                  e: [""]
+                },
+                  //answer: "d",
+                  rawanswer: "d",
+                  answer: "alcohol",
+                  answerAlt: [""]
+              }, 
+
+              {
+                question: "Which US state is famous for the Roswell UFO incident?", 
+                options: {
+                  a: "Seattle",
+                  b: "New Mexico",
+                  c: "California",
+                  d: "Arizona",
+                  e: [""]
+                },
+                  //answer: "b",
+                  rawanswer: "b",
+                  answer: "New Mexico",
+                  answerAlt: [""]
+              },
+
+              {
+                question: "Which country is South Korea closest in size to?",
+                options: {
+                  a: "Portugal",
+                  b: "Saudi Arabia",
+                  c: "France",
+                  d: "Germany",
+                  e: [""]
+                },
+                  //answer: "a", 
+                  rawanswer: "a", 
+                  answer: "Portugal", 
+                  answerAlt: [""]
+              },
+
+              {
+                question: "Name the highest grossing Broadway show of all time?",
+                options: {
+                  a: "Phantom of the Opera",
+                  b: "Mamma Mia",
+                  c: "Wicked",
+                  d: "The Lion King",
+                  e: [""]
+                },
+                  //answer: "d",
+                  rawanswer: "d",
+                  answer: "The Lion King",
+                  answerAlt: [""]
+              },
+
+              {
+                question: "What is the mascot of NYU?",
+                options: {
+                  a: "eagle",
+                  b: "bear",
+                  c: "bobcat",
+                  d: "parrot",
+                  e: [""]
+                },
+                  //answer: "c",
+                  rawanswer: "c",
+                  answer: "bobcat",
+                  answerAlt: [""]
+              },
+
+              {
+                question: "University of Illinois at Urbana-Champaign alumns founded which company?", //says dash
+                options: {
+                  a: "Amazon",
+                  b: "Barnes & Noble",
+                  c: "Facebook",
+                  d: "YouTube",
+                  e: ["Barnes and Noble"]
+                },
+                  //answer: "d",
+                  rawanswer: "d",
+                  answer: "YouTube",
+                  answerAlt: [""] 
+              },
+
+              {
+                question: "What are the school colors of University of Illinois at Urbana-Champaign?", //says dash
+                options: {
+                  a: "blue and red",
+                  b: "green and orange",
+                  c: "blue and orange",
+                  d: "blue and white",
+                  e: [""]
+                },
+                  //answer: "c",
+                  rawanswer: "c",
+                  answer: "blue and orange",
+                  answerAlt: [""]
+              },
+
+              {
+                question: "Who is NYC mayor Bill de Blasio's predecessor?",
+                options: {
+                  a: "Eric Johnson",
+                  b: "Michael Bloomberg",
+                  c: "Rudy Giuliani",
+                  d: "David Dinkins",
+                  e: [""]
+                },
+                  //answer: "b",
+                  rawanswer: "b",
+                  answer: "Michael Bloomberg",
+                  answerAlt: [""]
+              },
+
+              {
+                question: "Who of the following did not graduate from Hotchkiss?", 
+                options: {
+                  a: "Henry Ford",
+                  b: "Forrest Mars",
+                  c: "Mark Zuckerberg",
+                  d: "Jonathan Bush",
+                  e: [""]
+                },
+                  //answer: "c",
+                  rawanswer: "c",
+                  answer: "Mark Zuckerberg",
+                  answerAlt: [""] 
+              },
+
+              {
+                question: "Which year was Emma Willard School founded?", 
+                options: {
+                  a: "1805",
+                  b: "1814",
+                  c: "1850",
+                  d: "1923",
+                  e: [""] //year
+                },
+                  //answer: "b",
+                  rawanswer:"b",
+                  answer: "1814",
+                  answerAlt: [""]
+              },
+
+              {
+                question: "What is the busiest train station in the USA?",
+                options: {
+                  a: "Grand Central Station",
+                  b: "New York Penn Station",
+                  c: "Chicago Union Station",
+                  d: "Newark Penn Station",
+                  e: [""]
+                },
+                  //answer: "b",
+                  rawanswer: "b",
+                  answer: "d",
+                  answerAlt: [""]
+              },
+
+              {
+                question: "Who did not graduate from University of Texas?",
+                options: {
+                  a: "Sandra Bullock",
+                  b: "Michael S. Dell",
+                  c: "Rex W. Tillerson",
+                  d: "Jeb Bush",
+                  e: ["Michael S Dell", "Rec W Tillerson"] 
+                },
+                  //answer: "a",
+                  rawanswer: "a",
+                  answer: "Sandra Bullock",
+                  answerAlt: [""]
+              },
+
+              {
+                question: "Which is the first educational institute for Korean women?",
+                options: {
+                  a: "Ewha Womans University", // issues with ewha, wil just leave
+                  b: "Sookmyung Women's University‎",
+                  c: "Korea Women's Polytechnic",
+                  d: "Seoul Women's University",
+                  e: [""]
+                },
+                  //answer: "a",
+                  rawanswer: "a",
+                  answer: "Ewha Womans University",
+                  answerAlt: [""]
+              },
+
+              {
+                question: "What year was Hankuk University of Foreign Studies founded?", 
+                options: {
+                  a: "1941",
+                  b: "1950",
+                  c: "1954",
+                  d: "1955",
+                  e: [""] //year
+                }, 
+                  //answer: "c",
+                  rawanswer: "c",
+                  answer: "1954",
+                  answerAlt: [""]
+              },
+
+              {
+                question: "Who is a famous member of the New York Yankees?",
+                options: {
+                  a: "Babe Ruth",
+                  b: "Clayton Kershaw",
+                  c: "Billy Williams",
+                  d: "Jackie Robinson",
+                  e: [""]
+                },
+                  //answer: "a",
+                  rawanswer: "a",
+                  answer: "Babe Ruth",
+                  answerAlt: [""]
+              },
+
+              { 
+                question: "Which team has won the most World Series?", //didn't test
+                options: { 
+                  a: "New York Yankees",
+                  b: "Boston Red Sox",
+                  c: "Toronto Blue Jays",
+                  d: "LA Dodgers",
+                  e: [""]
+                },
+                  //answer: "a",
+                  rawanswer: "a",
+                  answer: "New York Yankees",
+                  answerAlt: [""]
+              },
+
+              {
+                question: "What is Hawaii's official state flower?",
+                options: { 
+                  a: "Gardenia",
+                  b: "Yellow Hibiscus",
+                  c: "Plumeria",
+                  d: "Hawaiian Lily",
+                  e: ["Gardinia"]
+                },
+                  //answer: "b",
+                  rawanswer: "b",
+                  answer: "Yellow Hibiscus",
+                  answerAlt: [""]
+              },
+
+              {
+                question: "Roughly how many million people live in North Korea?",
+                options: { 
+                  a: "25",
+                  b: "28",
+                  c: "32",
+                  d: "21",
+                  e: [""]
+                },
+                  //answer: "a",
+                  rawanswer: "a",
+                  answer: "25",
+                  answerAlt: [""]
+              },
+
+              {
+                question: "What scientific theory is Einstein most known for?",
+                options: { 
+                  a: "theory of relativity",
+                  b: "game theory",
+                  c: "evolution by natural selection",
+                  d: "information theory",
+                  e: [""]
+                },
+                  //answer: "a",
+                  rawanswer: "a",
+                  answer: "theory of relativitiy",
+                  answerAlt: [""]
+              },
+
+              {
+                question: "What was the original name of New York City?",
+                options: { 
+                  a: "New Hampshire",
+                  b: "New Netherland",
+                  c: "Plymouth Colony",
+                  d: "New Amsterdam",
+                  e: [""]
+                },
+                  //answer:"d",
+                  rawanswer: "d",
+                  answer: "New Amsterdam",
+                  answerAlt: [""]
+              },
+
+              {
+                question: "Which of the following is not a Carpenters song?",
+                options: { 
+                  a: "Hurting Each Other",
+                  b: "Rainy Days and Mondays",
+                  c: "Top of the World",
+                  d: "The Sound of Silence",
+                  e: [""]
+                },
+                  //answer: "d",
+                  rawanswer: "d",
+                  answer: "The Sound of Silence",
+                  answerAlt: [""]
+              },
+
+              {
+                question: "What are the real names of the Carpenters?",
+                options: { 
+                  a: "Karen and John",
+                  b: "Karen and Richard",
+                  c: "Susan and Richard",
+                  d: "Barbara and Simon",
+                  e: [""]
+                },
+                  //answer: "b",
+                  rawanswer: "b",
+                  answer: "Karen and Richard",
+                  answerAlt: [""]
+              },
+
+              {
+                question: "How many children are in the Brady Bunch?",
+                options: { 
+                  a: "5",
+                  b: "7",
+                  c: "4",
+                  d: "6",
+                  e: [""]
+                },
+                  //answer: "d",
+                  rawanswer: "d",
+                  answer: "6",
+                  answerAlt: [""]
+              },
+              
+              {
+                question: "What year did the first episode of the Brady Bunch come out?",
+                options: { 
+                  a: "1960",
+                  b: "1963",
+                  c: "1967",
+                  d: "1969",
+                  e: [""]
+                },
+                  //answer: "d",
+                  rawanswer: "d",
+                  answer: "1969",
+                  answerAlt: [""]
+              },
+
+              {
+                question: "What is the world's most valuable tech company?", 
+                options: { 
+                  a: "Apple",
+                  b: "Microsoft",
+                  c: "Alphabet",
+                  d: "Facebook",
+                  e: [""]
+                },
+                  //answer: "a",
+                  rawanswer: "a",
+                  answer: "Apple",
+                  answerAlt: [""]
+              },
+
+              {
+                question: "What is James Cameron's highest-earning film?",
+                options: { 
+                  a: "Avatar",
+                  b: "Titanic",
+                  c: "The Terminator",
+                  d: "Alita: Battle Angel",
+                  e: ["Alita Battle Angel"]
+                },
+                  //answer: "a",
+                  rawanswer: "a",
+                  answer: "Avatar",
+                  answerAlt: [""]
+              },
+          
+              {
+                question: "Which brain part is important for memory?", 
+                options: { 
+                  a: "brainstem",
+                  b: "cerebellum",
+                  c: "hippocampus",
+                  d: "medulla",
+                  e: [""]
+                },
+                  //answer: "c",
+                  rawanswer: "c",
+                  answer: "hippocampus",
+                  answerAlt: [""]
+              },
+
+              {
+                question: "What are the world's most-spoken languages after English and Chinese?", 
+                options: { 
+                  a: "French, Spanish, Portugese",
+                  b: "Hindi, German, Arabic",
+                  c: "Hindi, Spanish, French",
+                  d: "Hindi, Arabic, Russian",
+                  e: ["French Spanish Portugese", "Hindi German Arabic", "Hindi Spanish French", "Hindi Arabic Russian"] 
+                },
+                  //answer: "c",
+                  rawanswer: "c",
+                  answer: "Hindi, Spanish, French",
+                  answerAlt: ["Hindi Spanish French"] 
+              },
+
+              {
+                question: "What did the Korean War start and end (in armistice)?", 
+                options: { 
+                  a: "1950 to 1953",
+                  b: "1950 to 1954",
+                  c: "1951 to 1954",
+                  d: "1951 to 1953", 
+                  e: [""] //year
+                },
+                  //answer: "b",
+                  rawanswer: "b",
+                  answer: "1950 to 1953", 
+                  answerAlt: [""]
+              },
+
+              {
+                question: "What are the 7 colours in a rainbow?",
+                options: { 
+                  a: "red, orange, yellow, green, blue, indigo, violet",
+                  b: "red, orange, yellow, green, blue, indigo, white",
+                  c: "red, orange, yellow, green, blue, grey, white",
+                  d: "red, orange, yellow, green, blue, pink, turquoise",
+                  e: ["red orange yellow green blue indigo violet", "red orange yellow green blue indigo white", "red orange yellow green blue grey white", "red orange yellow green blue pink turquoise"] 
+                },
+                  //answer: "a",
+                  rawanswer: "a",
+                  answer: "red, orange, yellow, green, blue, indigo, violet",
+                  answerAlt: ["red orange yellow green blue indigo violet"]  //hope works 
+              },
+
+              {
+                question: "Who wrote the poem The Road Not Taken?",
+                options: { 
+                  a: "Robert Frost",
+                  b: "William Blake",
+                  c: "William Shakespeare",
+                  d: "Emily Dickinson",
+                  e: [""] 
+                },
+                  //answer: "a",
+                  rawanswer: "a",
+                  answer: "Robert Frost",
+                  answerAlt: [""]
+              },
+
+              {
+                question: "Which of the following is not a Boney M. song?",
+                options: { 
+                  a: "Daddy Cool",
+                  b: "Rivers of Babylon",
+                  c: "Rasputin",
+                  d: "Hollaback Girl",
+                  e: [""] 
+                },
+                  //answer: "d",
+                  rawanswer: "d",
+                  answer: "Hollaback Girl",
+                  answerAlt: [""]
+              },
+
+              {
+                question: "Which company was not founded in Seattle, Washington?", 
+                options: { 
+                  a: "UPS",
+                  b: "Starbucks",
+                  c: "Boeing",
+                  d: "Microsoft",
+                  e: [""] 
+                },
+                  //answer: "d",
+                  rawanswer: "d",
+                  answer: "Microsoft",
+                  answerAlt: [""]
+              },
+
+              {
+                question: "When was SpaceX founded?",
+                options: { 
+                  a: "2001",
+                  b: "2010",
+                  c: "1998", 
+                  d: "2002", 
+                  e: [""] //year
+                },
+                  //answer: "d",
+                  rawanswer: "d",
+                  answer: "2002",
+                  answerAlt: [""] 
+              },
+
+              {
+                question: "What is the most number of people to ever be on the International Space Station?", 
+                options: { 
+                  a: "10",
+                  b: "13",
+                  c: "4",
+                  d: "20",
+                  e: [""] 
+                },
+                  //answer: "b",
+                  rawanswer: "b",
+                  answer: "13",
+                  answerAlt: [""] 
+              },
+
+              {
+                question: "Which law school did Tiffany Trump attend?", 
+                options: { 
+                  a: "Yale",
+                  b: "Harvard",
+                  c: "Columbia",
+                  d: "Georgetown",
+                  e: [""] 
+                },
+                  //answer: "d",
+                  rawanswer: "d",
+                  answer: "Georgetown",
+                  answerAlt: [""] 
+              },
+
+              {
+                question: "Which YouTuber has the highest number of followers?", 
+                options: { 
+                  a: "PewDiePie",
+                  b: "WWE",
+                  c: "Kids Diana Show",
+                  d: "Big Hit Labels",
+                  e: [""] 
+                },
+                  //answer: "a",
+                  rawanswer: "a",
+                  answer: "PewDiePie", 
+                  answerAlt: [""]  
+              },
+
+              {
+                question: "Which galaxy is closest to ours?", 
+                options: { 
+                  a: "Milky Way",
+                  b: "Andromeda Galaxy",
+                  c: "Messier 63",
+                  d: "Baby Boom Galaxy",
+                  e: [""] 
+                },
+                  //answer: "b",
+                  rawanswer: "b",
+                  answer: "Andromeda Galaxy", 
+                  answerAlt: [""]  
+              },
+
+              {
+                question: "What is the name of our galaxy?", //not ideal if answer q which galaxy closest to ours before
+                options: { 
+                  a: "Milky Way",
+                  b: "Andromeda Galaxy",
+                  c: "Whirlpool Galaxy",
+                  d: "Sombrero Galaxy",
+                  e: [""] 
+                },
+                  //answer: "a",
+                  rawanswer: "a",
+                  answer: "Milky Way", 
+                  answerAlt: [""]  
+              },
+
+              {
+                question: "How many members are in BTS?",
+                options: { 
+                  a: "5",
+                  b: "6",
+                  c: "7",
+                  d: "8",
+                  e: [""] 
+                },
+                  //answer: "c",
+                  rawanswer: "c",
+                  answer: "7", 
+                  answerAlt: [""]  
+              },
+
+              {
+                question: "How many gold medals did Michael Phelps win at the 2008 Beijing Olympics?", 
+                options: { 
+                  a: "4",
+                  b: "6",
+                  c: "8",
+                  d: "10",
+                  e: [""] 
+                },
+                  //answer: "c",
+                  rawanswer: "c",
+                  answer: "8", 
+                  answerAlt: [""]  
+              },
+
+              {
+                question: "Who is the most decorated Olympian?", 
+                options: { 
+                  a: "Michael Phelps",
+                  b: "Ryan Lochte",
+                  c: "Simone Biles",
+                  d: "Usain Bolt",
+                  e: [""] 
+                },
+                  //answer: "a",
+                  rawanswer: "a",
+                  answer: "Michael Phelps", 
+                  answerAlt: [""]  
+              },
+
+              {
+                question: "Dinosaurs went extinct around how many million years ago, according to scientists?",
+                options: { 
+                  a: "108",
+                  b: "10",
+                  c: "217",
+                  d: "65",
+                  e: [""] 
+                },
+                  //answer: "d",
+                  rawanswer: "d",
+                  answer: "65", 
+                  answerAlt: [""]  
+              },
+
+              {
+                question: "Which actor stars in the movie My Name is Nobody?",  
+                options: { 
+                  a: "Terence Hill",
+                  b: "Robert De Niro",
+                  c: "Robert Duval",
+                  d: "Harrison Ford",
+                  e: ["Robert Duvall"] 
+                },
+                  //answer: "a",
+                  rawanswer: "a",
+                  answer: "Terence Hill", 
+                  answerAlt: [""]  
+              },
+              
+              {
+                question: "When was the movie My Name is Nobody released?", 
+                options: { 
+                  a: "1969",
+                  b: "1971",
+                  c: "1973",
+                  d: "1979",
+                  e: [""] //year
+                },
+                  //answer: "c",
+                  rawanswer: "c",
+                  answer: "1973", 
+                  answerAlt: [""]  
+              },
+
+              {
+                question: "Which is not a Donny Osmond song?", 
+                options: { 
+                  a: "Morning Side of the Mountain",
+                  b: "Please Mr Postman",
+                  c: "The Twelfth of Never",
+                  d: "One Bad Apple",
+                  e: [""] 
+                },
+                  //answer: "b",
+                  rawanswer: "b",
+                  answer: "Please Mr Postman",
+                  answerAlt: [""]  
+              },
+
+              { 
+                question: "Which was Donny Osmond's biggest hit?", 
+                options: { 
+                  a: "Go Away Little Girl",
+                  b: "Morning Side of the Mountain",
+                  c: "Young Love",
+                  d: "Sweet and Innocent",
+                  e: [""] 
+                },
+                  //answer: "a",
+                  rawanswer: "a",
+                  answer: "Go Away Little Girl", 
+                  answerAlt: [""]  
+              },
+
+              { 
+                question: "Who is the richest person in Asia?", 
+                options: { 
+                  a: "Jack Ma",
+                  b: "Mukesh Ambani",
+                  c: "Joseph Lau", 
+                  d: "Lee Kun-hee",
+                  e: [""] 
+                },
+                  //answer: "b",
+                  rawanswer: "b",
+                  answer: "Mukesh Ambani", 
+                  answerAlt: [""]  
+              },
+
+              { 
+                question: "When did Neil Armstrong walk on the moon?", 
+                options: { 
+                  a: "1959",
+                  b: "1961",
+                  c: "1969",
+                  d: "1970",
+                  e: [""] //year
+                },
+                  //answer: "c",
+                  rawanswer: "c",
+                  answer: "1969", 
+                  answerAlt: [""]  
+              },
+
+              { 
+                question: "Where was the highest temperature ever recorded?", 
+                options: { 
+                  a: "Death Valley, California",
+                  b: "Sahara Desert",
+                  c: "Ethiopia",
+                  d: "Libya",
+                  e: ["Death Valley California"] 
+                },
+                  //answer: "a",
+                  rawanswer: "a",
+                  answer: "Death Valley, California", 
+                  answerAlt: ["Death Valley California"]  
+              },
+
+              { 
+                question: "Around what is the coldest temperature ever recorded in Celcius?", 
+                options: { 
+                  a: "-60",
+                  b: "-73",
+                  c: "-89",
+                  d: "-105",
+                  e: [""] 
+                },
+                  //answer: "c",
+                  rawanswer: "c",
+                  answer: "-89", 
+                  answerAlt: [""]  //"minus" or "negative" [number] should also work
+              },
+
+              { 
+                question: "When did Sultans of Swing by Dire Straits come out?", 
+                options: { 
+                  a: "1968",
+                  b: "1970",
+                  c: "1977",
+                  d: "1982",
+                  e: [""]  //year
+                },
+                  //answer: "c",
+                  rawanswer: "c",
+                  answer: "1977", 
+                  answerAlt: [""]  
+              },
+
+              { 
+                question: "Which number street is Koreatown located in in New York City?", 
+                options: { 
+                  a: "32",
+                  b: "38",
+                  c: "42",
+                  d: "54",
+                  e: [""] 
+                },
+                  //answer: "a",
+                  rawanswer: "a",
+                  answer: "32", 
+                  answerAlt: [""]  
+              },
+
+              { 
+                question: "Which position did football player Park Ji-sun play as?", 
+                options: { 
+                  a: "defender",
+                  b: "forward",
+                  c: "midfielder",
+                  d: "goalkeeper",
+                  e: [""] 
+                },
+                  //answer: "c",
+                  rawanswer: "c",
+                  answer: "midfielder", 
+                  answerAlt: [""]  
+              },
+              
+              { 
+                question: "When was the movie Saving Private Ryan released?",
+                options: { 
+                  a: "1995", 
+                  b: "1997",
+                  c: "1998",
+                  d: "2000",
+                  e: [""] //year
+                },
+                  //answer: "c",
+                  rawanswer: "c",
+                  answer: "1998", 
+                  answerAlt: [""]  
+              },  
+              
+              { 
+                question: "Which star is the closest to Earth?", 
+                options: { 
+                  a: "Antares",
+                  b: "the Sun",
+                  c: "Polaris",
+                  d: "Arcturus",//Siriuis
+                  e: [""] 
+                },
+                  //answer: "b",
+                  rawanswer: "b",
+                  answer: "the Sun", 
+                  answerAlt: [""]  
+              },  
+
+              { 
+                question: "Who wrote the Republic?", 
+                options: { 
+                  a: "Plato",
+                  b: "Aristotle",
+                  c: "Socrates",
+                  d: "Arthur Schopenhauer",
+                  e: [""] 
+                },
+                  //answer: "a",
+                  rawanswer: "a",
+                  answer: "Plato", 
+                  answerAlt: [""]  
+              },  
+  ];
+
+  function speak(text) {
+    var msg = new SpeechSynthesisUtterance();
+    var voices = speechSynthesis.getVoices(); 
+    msg.voice = voices[0]; //print all voices in console: speechSynthesis.getVoices()
+    msg.lang = 'en-US';
+    msg.volume = 2; //0 to 1. float, default 1
+    msg.rate = 0.9; //0.1 to 10 (fastest). default 1
+    msg.pitch = 1.2; //0 to 2 (highest). default 1
+    msg.text = text;
+    speechSynthesis.speak(msg);
+
+    msg.onend = function() { 
+      console.log("end speaking");
+      speaking = false;
+    };
+    
+    msg.onstart = function() {
+      console.log("start speaking");
+      speaking = true;
+    }
+    return msg;
+  }
+
+  window.onunload = function () { 
+    window.speechSynthesis.cancel(); 
+  }
+
+  document.addEventListener('visibilitychange', function(){
+    window.speechSynthesis.cancel();
+    console.log("changed tab"); //stops speaking if change tab
+  })
+  /* window.onpopstate=function(){ alert("Back/Forward clicked!"); } */
+ 
+  //console.log(JSON.stringify(questions)); //first time? onload?
+
+  function bee() { //some conditions redundant 
+    document.body.style.backgroundColor = "yellow", //need for wrong and correct
+    document.querySelector("iframe").src = ""; //need for correct and wrong. document.getElementById("media").src = "" or block/none or check if blockness is true or window other method
+    document.querySelector("iframe").style.display = "none",//just did. redundant
+    //or document.querySelector("iframe#media") or document.getElementById("media") or document.querySelector("media")?
+    document.querySelector("div#quizdiv").style.display = "block",
+    document.querySelector("p#question").style.display = "block",
+    document.getElementById("results").style.display = "none" 
+  } 
+
+  if(localStorage.getItem("qs") === null || localStorage.getItem("qs") == 0) { //if qs does not exist or ran out, start at beginning
+      qs = 100;
+      localStorage.setItem("qs", qs); //qs.toString()
+  } else { //if (localStorage.getItem("qs") > 0) { //wont be undefined
+      qs = parseInt(localStorage.getItem("qs")); //returns string?
+  }
+  console.log("qs: " + qs);
+
+  loadQuiz();
+
+  function loadQuiz() {
+    gum = Math.floor(Math.random() * (qs-1)); //qs - 1 is max. (qs - 1) - 0 -> qs -1 -> (qs - 1) + 0 -> qs - 1. so  Math.floor(Math.random() * (qs - 1)). 0 is first question. 0 to last index (questions length - 1) 
+    console.log("loadQuiz. gum: " + gum);
+
+    console.log("question: " + questions[gum].question + " answer: " + questions[gum].rawanswer);
+
+    document.getElementById("question").textContent = questions[gum].question;
+    document.getElementById("A").textContent = "A) " + questions[gum].options.a;
+    document.getElementById("B").textContent = "B) " + questions[gum].options.b;
+    document.getElementById("C").textContent = "C) " + questions[gum].options.c;
+    document.getElementById("D").textContent = "D) " + questions[gum].options.d;
+
+    bee();
+
+    //setTimeout(function() {
+    /* if(questions[gum].options.e {
+    speak(",A,, " + questions[0].options.a + ",B,, " + questions[0].options.b + ",C,, " + questions[0].options.c + ", D,, " + questions[0].options.d + ", E,, " + "questions[0].options.e" + "."); //what if more options
+    } else {
+    speak(",A,, " + questions[0].options.a + ",B,, " + questions[0].options.b + ",C,, " + questions[0].options.c + ", D,, " + questions[0].options.d + "."); //what if more options
+    } */
+
+    speak(questions[gum].question + ",A,, " + questions[gum].options.a + ",B,, " + questions[gum].options.b + ",C,, " + questions[gum].options.c + ", D,, " + questions[gum].options.d + ".");
+    return gum; //need? 
+  }
+
+  document.body.onkeyup = function(e) { //order matters. if gameover last condition: when gameover and continue press spacebar, prints "message showing" rather than "game Over" when continue press spacebar
+  //some condiitons redundant
+    if(media.src) {
+      if(e.keyCode == 32) { 
+        if (gameOver === true) { //or combine conditions
+          console.log("Game over"); 
+          return;
+        } else if (speaking === true) { 
+          console.log("speaking, don't listen");
+          return;
+        } else if (window.getComputedStyle(results, null).display === "block") { // document.getElementById("results").style.display === "block") === true)
+          console.log("message showing");
+          return;
+        } else if (!sound.paused) {
+          console.log("audio playing"); //just in case, no need bc correct/wrong message show
+          return;
+        } else if (document.querySelector("iframe").src.includes("youtube")) { //or display block/none
+          console.log("video showing");
+          return;
+        } else if (document.body.style.backgroundColor === "red") {
+          console.log("red background");
+          return;
+        } else if (document.body.style.backgroundColor === "white") {
+          console.log("white background");
+          return;
+        } else {  
+          runSpeechRecognition();
+        }
+      }  
+  }
+  }
+  /* else if (listening === true) {
+   console.log("listening already, rerun");
+   runSpeechRecognition();
+   return;
+  } */
+  ///no need check listening, if listening then restart listening. no action if listening and listen again
+
+  function runSpeechRecognition() {
+    recognition.onstart=function() {
+      console.log("listening...");
+      //document.querySelector("p#info").style.display = block;
+      //document.querySelector("p#info").textContent = "listening";
+    } 
+
+    recognition.start();
+
+    recognition.onspeechend = function() {
+      recognition.stop();
+      console.log("stopped listening"); 
+      //document.querySelector("p#info").style.display = block;
+      //document.querySelector("p#info").textContent = "stopped listening";
+    }
+  }
+
+  recognition.onresult = function(event) {
+    var confidence = event.results[0][0].confidence;
+    var transcript = event.results[0][0].transcript;
+    //console.log("transcript: " + transcript);
+    console.log("confidence: " + confidence * 100 + '%');
+
+    transcript = transcript.toUpperCase(); 
+
+    checkAnswer(transcript, gum);
+  }
+
+  function checkAnswer(transcript, gum) { //hope correct way for all
+    if(transcript === "SEE")  {  
+      transcript = "C";
+    }
+
+    for (var i = 0; i < questions[gum].options.e.length; i++) { //or use option f, g, etc
+      questions[gum].options.e[i] = questions[gum].options.e[i].toUpperCase();
+    } 
+
+    for (var i = 0; i < questions[gum].answerAlt.length; i++) { 
+      questions[gum].answerAlt[i] = questions[gum].answerAlt[i].toUpperCase();
+    } 
+
+    console.log("transcript: " + transcript);
+
+    if (transcript === questions[gum].answer.toUpperCase() || 
+      transcript === questions[gum].rawanswer.toUpperCase() ||
+      questions[gum].answerAlt.includes(transcript)) { 
+        console.log("correct");
+        msg = speak("Correct"); 
+      
+        document.body.style.backgroundColor = "white"; 
+        document.querySelector("div#quizdiv").style.display = "none";
+        document.querySelector("p#question").style.display = "none"; 
+        document.getElementById("results").style.display = "block";
+        document.getElementById("results").textContent = "Correct!";
+        
+        correctVisuals();
+      } else if (
+        transcript !== questions[gum].answer.toUpperCase() && 
+        transcript !== questions[gum].rawanswer.toUpperCase() &&
+        questions[gum].answerAlt.indexOf(transcript) === -1 && 
+        (transcript === questions[gum].options.a.toUpperCase() || 
+        transcript === questions[gum].options.b.toUpperCase() || 
+        transcript === questions[gum].options.c.toUpperCase() || 
+        transcript === questions[gum].options.d.toUpperCase()) || 
+        (transcript === "A" || transcript === "B" || transcript === "C" || transcript === "D") ||
+        (questions[gum].options.e.includes(transcript)) //no speak or display option e
+        ) { 
+        console.log("wrong answer"); 
+        msg = speak("Wrong! ,, correct answer," + ", ,," + questions[gum].answer);
+
+        document.body.style.backgroundColor = "red";   
+        document.querySelector("div#quizdiv").style.display = "none";
+        document.querySelector("p#question").style.display = "none"; 
+        document.getElementById("results").style.display = "block";
+        document.getElementById("results").textContent = "Wrong. Correct answer: " + questions[gum].answer; 
+        
+        wrongVisuals();
+      } else if (
+        transcript !== questions[gum].answer.toUpperCase() && //no need if onnomatch? overlapping
+        transcript !== questions[gum].rawanswer.toUpperCase() && 
+        questions[gum].answerAlt.indexOf(transcript) === -1 &&
+        (transcript !== questions[gum].options.a.toUpperCase() && 
+        transcript !== questions[gum].options.b.toUpperCase() && 
+        transcript !== questions[gum].options.c.toUpperCase() && 
+        transcript !== questions[gum].options.d.toUpperCase()) && 
+        (transcript !== "A" && transcript !== "B" && transcript !== "C" && transcript !== "D") &&
+        (questions[gum].options.e.indexOf(transcript) === -1) 
+      ) {  
+        console.log("No match options");
+        msg = speak("Wrong. Try again");
+
+        document.body.style.backgroundColor = "red";
+        document.querySelector("div#quizdiv").style.display = "none";
+        document.querySelector("p#question").style.display = "none"; 
+        document.getElementById("results").style.display = "block"; 
+        document.getElementById("results").textContent = "Wrong"; 
+
+        msg.onend = function() { 
+          console.log("end speaking"); //or else doesn't print. repetitive code
+          speaking = false;
+          setTimeout(bee, 1000); 
+        };
+      } 
+  }
+
+  function correctVisuals() {
+    randomNumber = createRandomNumber(); 
+    console.log("randomNumber: " + randomNumber);
+    //balloons
+
+    if(randomNumber === 1 || randomNumber === 2) { 
+      sound.src = "audio/applause.mp3";
+      sound.currentTime = 0; 
+      sound.play(); //bit delay b4 start
+      
+      /* rename sound or else keeps calling isgameover whenever sound ends (multiple questions)
+      sound.addEventListener("ended", function(){  //sound.onend = function() {} doesnt work}
+        sound.currentTime = 0;
+        //console.log("ended sound");
+        //isGameOver(); 
+      }); */
+
+      setTimeout(isGameOver, 3000); 
+      
+    } else if (randomNumber === 3) {
+        sound.src = "audio/bell.mp3";
+        sound.currentTime = 0;
+        sound.play();
+
+      setTimeout(isGameOver, 4000);
+
+    } else if (randomNumber === 4 || randomNumber === 5) {
+        msg.onend = function() { 
+          console.log("end speaking");
+          speaking = false;
+
+          document.getElementById("results").style.display = "none", 
+          document.querySelector("iframe").src = "https://www.youtube.com/embed/fNFzfwLM72c?&start=92&end=100&autoplay=1", 
+          document.querySelector("iframe").style.display = "block",
+
+          setTimeout(isGameOver, 10000); 
+        };
+    } else {
+        msg.onend = function() { 
+          console.log("end speaking");
+          speaking = false;
+          isGameOver();
+        }
+    }
+  }
+
+  function wrongVisuals() { 
+    randomNumber = createRandomNumber(); 
+    console.log("randomNumber: " + randomNumber);
+
+    if(randomNumber === 1 || randomNumber === 2) {  
+      sound.src = "audio/crowd-groan.mp3";
+      sound.currentTime = 0;
+      sound.play(); 
+
+      msg.onend = function() { 
+        console.log("end speaking");
+        speaking = false;
+        isGameOver(); 
+      }
+     
+    } else if (randomNumber === 3) { 
+        sound.src = "audio/buzzer.mp3";
+        sound.currentTime = 0;
+        sound.play(); 
+
+        msg.onend = function() { 
+          console.log("end speaking");
+          speaking = false;
+          isGameOver();
+        }
+
+    } else if (randomNumber === 4) { 
+        msg.onend = function() { 
+          console.log("end speaking");
+          speaking = false;
+        
+          document.getElementById("results").style.display = "none";
+          document.querySelector("iframe").src = "https://www.youtube.com/embed/SBXbW85_zSM?&start=149&end=156&autoplay=1"; 
+          document.querySelector("iframe").style.display = "block";
+
+          setTimeout(isGameOver, 9000); 
+        }
+    } else {
+        msg.onend = function() { 
+          console.log("end speaking");
+          speaking = false;
+          isGameOver();
+        }
+    }
+  }
+
+  function createRandomNumber() {
+    var randomNumber = Math.floor(Math.random() * 10) + 1; //1 to 10
+    return randomNumber;
+  }
+
+  function isGameOver() {
+    //questions = parseInt(localStorage.getItem("qs"));  
+    console.log("questions length: " + questions.length);
+    questions.splice(gum, 1); //drop question at index gum
+    console.log("questions length after splice: " + questions.length);
+          
+    qs = questions.length;
+
+    localStorage.setItem("qs", qs); //qs.toString(). questions.length.toString(). no need toString(), auto converts # to string in localstorage. just leave
+    console.log("qs: " + parseInt(localStorage.getItem("qs"))); 
+
+   //console.log("questions: " + questions);
+   console.log(JSON.stringify(questions)); 
+
+    //local storage qs and questions.length should always be same. hope so QQ
+    if(questions === undefined || questions.length === 0) { //if run out of questions
+      gameOver = true;
+      console.log("GameOver: " + gameOver);
+
+      setTimeout(function() {
+        document.body.style.backgroundColor = "yellow", 
+        document.querySelector("iframe").src = "",
+        document.querySelector("iframe").style.display = "none", //redundant. just did
+        document.querySelector("div#quizdiv").style.display = "none",
+        document.querySelector("p#question").style.display = "none",
+        document.getElementById("results").style.display = "block", 
+        document.getElementById("results").textContent = "Game Over"
+      }, 2000);
+            
+      return; //qs = 0, questions.length = 0, gum = 0, questions array = []
+    } else { //questions in array
+        setTimeout(loadQuiz, 2000); //otherwise show question too early
+    }
+  }
+  
+  recognition.onnomatch = function(event) {
+    console.log("Speech not recognised");
+    msg = speak("speech not recognised, ,,try again");
+
+    document.querySelector("div#quizdiv").style.display = "none";
+    document.querySelector("p#question").style.display = "none";
+    document.getElementById("results").style.display = "block"; 
+    document.getElementById("results").textContent = "Speech not recognised";  
+
+    msg.onend = function() { 
+      console.log("end speaking");
+      speaking = false;
+      bee(); //yellow redundant
+    };
+  }
+
+  recognition.onerror = function(event) {
+    console.log("Error: " + event.error);
+    msg = speak("Error,," + ",try again");  
+
+    document.querySelector("div#quizdiv").style.display = "none";
+    document.querySelector("p#question").style.display = "none";
+    document.getElementById("results").style.display = "block";
+    document.getElementById("results").textContent = "Error in recognition: " + event.error; 
+
+    msg.onend = function() { 
+      console.log("end speaking");
+      speaking = false;
+      bee();
+    };
+  }
+} else { 
+    console.log("Speech recognition not supported");
+} 
+
+</script>
+            
+</body>
+</html>
+          
+<!----
+Reference:
+https://developer.mozilla.org/en-US/docs/Web/API/Web_Speech_API/Using_the_Web_Speech_API 
+https://www.studytonight.com/post/javascript-speech-recognition-example-speech-to-text
+https://www.studytonight.com/post/javascript-text-to-speech-using-speechsynthesis-interface
+https://dev.to/asaoluelijah/text-to-speech-in-3-lines-of-javascript-b8h
+http://patorjk.com/software/taag
+https://www.freesoundeffects.com/free-sounds/applause-10033/https://www.freesoundeffects.com/files/download.php (applause)
+https://freesound.org/people/tahur1976/sounds/380490/ (bell, converted to mp3)
+https://freesound.org/people/guitarguy1985/sounds/54047/ (buzzer, converted to mp3)
+missing source for crowd-groan.mp3
+stackoverflow
+possibly others
+--->
