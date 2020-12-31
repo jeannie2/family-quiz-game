@@ -14,10 +14,15 @@ https://www.studytonight.com/post/javascript-speech-recognition-example-speech-t
 https://www.studytonight.com/post/javascript-text-to-speech-using-speechsynthesis-interface
 https://dev.to/asaoluelijah/text-to-speech-in-3-lines-of-javascript-b8h
 http://patorjk.com/software/taag
-https://www.freesoundeffects.com/free-sounds/applause-10033/https://www.freesoundeffects.com/files/download.php 
-https://freesound.org/people/tahur1976/sounds/380490/ 
-https://freesound.org/people/guitarguy1985/sounds/54047/ 
+
+https://www.freesoundeffects.com/free-sounds/applause-10033/https://www.freesoundeffects.com/files/download.php (applause)
+
+https://freesound.org/people/tahur1976/sounds/380490/ (bell, converted to mp3)
+
+https://freesound.org/people/guitarguy1985/sounds/54047/ (buzzer, converted to mp3)
 
 missing source for crowd-groan.mp3
+
 stackoverflow
+
 possibly others
