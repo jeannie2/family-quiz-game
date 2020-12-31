@@ -1,6 +1,6 @@
 #  Family Quiz Game
 
-Simple quiz game text-to-speech and speech-to-text
+Simple quiz game using text-to-speech and speech-to-text
 
 ## Technologies
 This project is created using HTML, CSS, JavaScript
