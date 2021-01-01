@@ -75,9 +75,9 @@
 //error when call listening when already listening. will leave
 //Korean: need check option e and answerAlt
 
-//QQ hope gum is correct. check gum within bounds when not many qs left, hope works. gum !== 0 at beginning
-//QQ ideally detect end sound, correct sound may play when next question showing
-//QQ ideally detect end youtube video, addeventlistener
+//QQ hope gum correct. check gum within bounds when not many qs left, hope works. gum !== 0 at beginning
+//QQ ideally detect end sound. correct sound may play when next question showing
+//QQ ideally detect end youtube video. addeventlistener
   //detect end of audio: https://stackoverflow.com/questions/11103582/how-do-you-detect-when-html5-audio-has-finished-playing-more-than-once 
   //detect end yt video: https://stackoverflow.com/a/27073513 
 //QQ how make video play after applause sound? no work if else if. if use if (and else if?) calls more than 1 question ~ maybe calling isgameover() twice. might play video at same time as applause
@@ -1678,7 +1678,7 @@ if ('speechSynthesis' in window) { //initialise gameOver, speaking in global sco
   loadQuiz();
 
   function loadQuiz() {
-    gum = Math.floor(Math.random() * (qs-1)); //qs - 1 is max. (qs - 1) - 0 -> qs -1 -> (qs - 1) + 0 -> qs - 1. so  Math.floor(Math.random() * (qs - 1)). 0 is first question. 0 to last index (questions length - 1) 
+    gum = Math.floor(Math.random() * qs); //qs - 1 is max. (qs - 1) - 0 + 1 ) + 0 -> (qs - 1) + 1 -> qs so  Math.floor(Math.random() * qs. 0 is first question. 0 to last index (questions length - 1) 
     console.log("loadQuiz. gum: " + gum);
 
     console.log("question: " + questions[gum].question + " answer: " + questions[gum].rawanswer);
@@ -1704,7 +1704,7 @@ if ('speechSynthesis' in window) { //initialise gameOver, speaking in global sco
 
   document.body.onkeyup = function(e) { //order matters. if gameover last condition: when gameover and continue press spacebar, prints "message showing" rather than "game Over" when continue press spacebar
   //some condiitons redundant
-    if(media.src) {
+    //if(media.src) {
       if(e.keyCode == 32) { 
         if (gameOver === true) { //or combine conditions
           console.log("Game over"); 
@@ -1731,7 +1731,7 @@ if ('speechSynthesis' in window) { //initialise gameOver, speaking in global sco
           runSpeechRecognition();
         }
       }  
-  }
+  //}
   }
   /* else if (listening === true) {
    console.log("listening already, rerun");
